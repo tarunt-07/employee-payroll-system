@@ -248,15 +248,17 @@ export function RegisterPage() {
 export function DashboardPage() {
   const [stats, setStats] = useState({
     total: 0,
-    totalPayroll: 0,
-    avgSalary: 0,
+    totalCompensation: 0,
+    totalTakeHome: 0,
+    avgCompensation: 0,
     totalTax: 0,
     departments: {},
   });
   const [summary, setSummary] = useState({
     recentEmployees: [],
-    highestPaid: [],
-    departmentSpend: {},
+    highestCompensated: [],
+    departmentCompensation: {},
+    topDepartment: null,
   });
   const [loading, setLoading] = useState(true);
   const pushToast = useToast();
@@ -309,18 +311,18 @@ export function DashboardPage() {
       <div className="grid cols-4">
         <MetricCard label="Employees" value={loading ? "..." : stats.total} accent="var(--gold)" />
         <MetricCard
-          label="Total payroll"
-          value={loading ? "..." : currency.format(stats.totalPayroll || 0)}
+          label="Total compensation"
+          value={loading ? "..." : currency.format(stats.totalCompensation || 0)}
           accent="#84cc16"
         />
         <MetricCard
-          label="Average take-home"
-          value={loading ? "..." : currency.format(stats.avgSalary || 0)}
+          label="Average gross pay"
+          value={loading ? "..." : currency.format(stats.avgCompensation || 0)}
           accent="#38bdf8"
         />
         <MetricCard
-          label="Tax tracked"
-          value={loading ? "..." : currency.format(stats.totalTax || 0)}
+          label="Take-home total"
+          value={loading ? "..." : currency.format(stats.totalTakeHome || 0)}
           accent="#fb7185"
         />
       </div>
@@ -346,7 +348,7 @@ export function DashboardPage() {
                       {employee.empId} · {employee.department}
                     </span>
                   </div>
-                  <strong>{currency.format(employee.netPay || 0)}</strong>
+                  <strong>{currency.format(employee.grossPay || 0)}</strong>
                 </article>
               ))
             ) : (
@@ -359,18 +361,18 @@ export function DashboardPage() {
           <div className="section-head">
             <div>
               <h2>Top compensation</h2>
-              <p>The highest current net pay across the organization.</p>
+              <p>The highest current gross compensation across the organization.</p>
             </div>
           </div>
           <div className="stack-list">
-            {summary.highestPaid.length ? (
-              summary.highestPaid.map((employee) => (
+            {summary.highestCompensated.length ? (
+              summary.highestCompensated.map((employee) => (
                 <article className="list-row" key={employee._id}>
                   <div>
                     <strong>{employee.name}</strong>
                     <span>{employee.department}</span>
                   </div>
-                  <strong>{currency.format(employee.netPay || 0)}</strong>
+                  <strong>{currency.format(employee.grossPay || 0)}</strong>
                 </article>
               ))
             ) : (
@@ -383,17 +385,23 @@ export function DashboardPage() {
       <section className="card section-gap">
         <div className="section-head">
           <div>
-            <h2>Department payroll share</h2>
-            <p>Net payroll distribution across departments.</p>
+            <h2>Department compensation share</h2>
+            <p>Gross compensation distribution across departments.</p>
           </div>
+          {summary.topDepartment ? (
+            <div className="hero-panel__badge">
+              <span>Top department</span>
+              <strong>{summary.topDepartment.name}</strong>
+            </div>
+          ) : null}
         </div>
         <div className="department-bars">
-          {Object.entries(summary.departmentSpend || {}).length ? (
-            Object.entries(summary.departmentSpend).map(([department, amount]) => (
+          {Object.entries(summary.departmentCompensation || {}).length ? (
+            Object.entries(summary.departmentCompensation).map(([department, details]) => (
               <div className="bar-row" key={department}>
                 <div className="bar-row__meta">
-                  <span>{department}</span>
-                  <strong>{currency.format(amount)}</strong>
+                  <span>{department} · {details.headcount} people</span>
+                  <strong>{currency.format(details.gross)}</strong>
                 </div>
                 <div className="bar-track">
                   <div
@@ -401,15 +409,21 @@ export function DashboardPage() {
                     style={{
                       width: `${Math.max(
                         8,
-                        Math.round((amount / (stats.totalPayroll || amount || 1)) * 100)
+                        Math.round(
+                          (details.gross / (stats.totalCompensation || details.gross || 1)) * 100
+                        )
                       )}%`,
                     }}
                   />
                 </div>
+                <div className="bar-row__meta">
+                  <span>Avg gross: {currency.format(details.gross / details.headcount)}</span>
+                  <span>Take-home: {currency.format(details.net)}</span>
+                </div>
               </div>
             ))
           ) : (
-            <EmptyState text="Department payroll split will appear once employee salaries are available." />
+            <EmptyState text="Department compensation split will appear once employee salaries are available." />
           )}
         </div>
       </section>
@@ -1158,7 +1172,43 @@ export function ReportsPage() {
             <MetricCard label="Headcount" value={report.headcount} accent="#f4c430" />
             <MetricCard label="Active Today" value={report.activeToday} accent="#22c55e" />
             <MetricCard label="Pending Leaves" value={report.pendingLeaves} accent="#fb7185" />
-            <MetricCard label="Payroll Total" value={currency.format(report.payrollTotal || 0)} accent="#38bdf8" />
+            <MetricCard label="Compensation Total" value={currency.format(report.compensationTotal || 0)} accent="#38bdf8" />
+          </div>
+          <div className="grid cols-2 section-gap">
+            <section className="card">
+              <h2 style={{ marginTop: 0 }}>Compensation Snapshot</h2>
+              <div className="stack-list">
+                <article className="list-row">
+                  <strong>Gross compensation</strong>
+                  <span>{currency.format(report.compensationTotal || 0)}</span>
+                </article>
+                <article className="list-row">
+                  <strong>Take-home payout</strong>
+                  <span>{currency.format(report.takeHomeTotal || 0)}</span>
+                </article>
+              </div>
+            </section>
+            <section className="card">
+              <h2 style={{ marginTop: 0 }}>Planning Notes</h2>
+              <div className="stack-list">
+                <article className="list-row">
+                  <strong>Tax drag</strong>
+                  <span>
+                    {report.compensationTotal
+                      ? `${Math.round(
+                          ((report.compensationTotal - report.takeHomeTotal) /
+                            report.compensationTotal) *
+                            100
+                        )}%`
+                      : "0%"}
+                  </span>
+                </article>
+                <article className="list-row">
+                  <strong>Workforce health</strong>
+                  <span>{report.activeToday} active today</span>
+                </article>
+              </div>
+            </section>
           </div>
           <div className="grid cols-2 section-gap">
             <section className="card">

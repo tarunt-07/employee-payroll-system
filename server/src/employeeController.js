@@ -54,8 +54,12 @@ export const getStats = async (_req, res) => {
   try {
     const employees = await employeeRepo.findAll();
     const total = employees.length;
-    const totalPayroll = employees.reduce((sum, employee) => sum + (employee.netPay || 0), 0);
-    const avgSalary = total ? totalPayroll / total : 0;
+    const totalCompensation = employees.reduce(
+      (sum, employee) => sum + (employee.grossPay || 0),
+      0
+    );
+    const totalTakeHome = employees.reduce((sum, employee) => sum + (employee.netPay || 0), 0);
+    const avgCompensation = total ? totalCompensation / total : 0;
     const totalTax = employees.reduce((sum, employee) => sum + (employee.taxAmount || 0), 0);
     const departments = {};
 
@@ -64,7 +68,14 @@ export const getStats = async (_req, res) => {
       departments[department] = (departments[department] || 0) + 1;
     });
 
-    ok(res, { total, totalPayroll, avgSalary, totalTax, departments });
+    ok(res, {
+      total,
+      totalCompensation,
+      totalTakeHome,
+      avgCompensation,
+      totalTax,
+      departments,
+    });
   } catch (error) {
     err(res, error.message, 500);
   }
@@ -74,16 +85,37 @@ export const getDashboardSummary = async (_req, res) => {
   try {
     const employees = await employeeRepo.findAll();
     const recentEmployees = employees.slice(0, 5);
-    const highestPaid = [...employees]
-      .sort((left, right) => (right.netPay || 0) - (left.netPay || 0))
+    const highestCompensated = [...employees]
+      .sort((left, right) => (right.grossPay || 0) - (left.grossPay || 0))
       .slice(0, 5);
-    const departmentSpend = employees.reduce((acc, employee) => {
+    const departmentCompensation = employees.reduce((acc, employee) => {
       const key = employee.department || "General";
-      acc[key] = (acc[key] || 0) + (employee.netPay || 0);
+      const current = acc[key] || { gross: 0, net: 0, headcount: 0 };
+      acc[key] = {
+        gross: current.gross + (employee.grossPay || 0),
+        net: current.net + (employee.netPay || 0),
+        headcount: current.headcount + 1,
+      };
       return acc;
     }, {});
 
-    ok(res, { recentEmployees, highestPaid, departmentSpend });
+    const topDepartment = Object.entries(departmentCompensation)
+      .sort((left, right) => right[1].gross - left[1].gross)[0];
+
+    ok(res, {
+      recentEmployees,
+      highestCompensated,
+      departmentCompensation,
+      topDepartment: topDepartment
+        ? {
+            name: topDepartment[0],
+            ...topDepartment[1],
+            averageGross: topDepartment[1].headcount
+              ? topDepartment[1].gross / topDepartment[1].headcount
+              : 0,
+          }
+        : null,
+    });
   } catch (error) {
     err(res, error.message, 500);
   }

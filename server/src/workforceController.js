@@ -117,7 +117,8 @@ export const getReportsOverview = async (_req, res) => {
       headcount: employees.length,
       activeToday: attendance.filter((item) => item.status !== "Absent").length,
       pendingLeaves: leaves.filter((item) => item.status === "Pending").length,
-      payrollTotal: employees.reduce((sum, item) => sum + (item.netPay || 0), 0),
+      compensationTotal: employees.reduce((sum, item) => sum + (item.grossPay || 0), 0),
+      takeHomeTotal: employees.reduce((sum, item) => sum + (item.netPay || 0), 0),
       attendanceBreakdown,
       leaveBreakdown,
     });

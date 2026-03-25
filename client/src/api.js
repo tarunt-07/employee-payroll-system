@@ -197,7 +197,11 @@ export const getPayslip = (empId) => {
 export const getStats = () => {
   if (isPreviewSession()) {
     const employees = getMockEmployees();
-    const totalPayroll = employees.reduce((sum, employee) => sum + (employee.netPay || 0), 0);
+    const totalCompensation = employees.reduce(
+      (sum, employee) => sum + (employee.grossPay || 0),
+      0
+    );
+    const totalTakeHome = employees.reduce((sum, employee) => sum + (employee.netPay || 0), 0);
     const totalTax = employees.reduce((sum, employee) => sum + (employee.taxAmount || 0), 0);
     const departments = employees.reduce((acc, employee) => {
       acc[employee.department] = (acc[employee.department] || 0) + 1;
@@ -206,8 +210,9 @@ export const getStats = () => {
 
     return Promise.resolve({
       total: employees.length,
-      totalPayroll,
-      avgSalary: employees.length ? totalPayroll / employees.length : 0,
+      totalCompensation,
+      totalTakeHome,
+      avgCompensation: employees.length ? totalCompensation / employees.length : 0,
       totalTax,
       departments,
     });
@@ -219,18 +224,35 @@ export const getStats = () => {
 export const getDashboardSummary = () => {
   if (isPreviewSession()) {
     const employees = getMockEmployees();
-    const highestPaid = [...employees]
-      .sort((left, right) => (right.netPay || 0) - (left.netPay || 0))
+    const highestCompensated = [...employees]
+      .sort((left, right) => (right.grossPay || 0) - (left.grossPay || 0))
       .slice(0, 5);
-    const departmentSpend = employees.reduce((acc, employee) => {
-      acc[employee.department] = (acc[employee.department] || 0) + (employee.netPay || 0);
+    const departmentCompensation = employees.reduce((acc, employee) => {
+      const current = acc[employee.department] || { gross: 0, net: 0, headcount: 0 };
+      acc[employee.department] = {
+        gross: current.gross + (employee.grossPay || 0),
+        net: current.net + (employee.netPay || 0),
+        headcount: current.headcount + 1,
+      };
       return acc;
     }, {});
+    const topDepartmentEntry = Object.entries(departmentCompensation).sort(
+      (left, right) => right[1].gross - left[1].gross
+    )[0];
 
     return Promise.resolve({
       recentEmployees: employees.slice(0, 5),
-      highestPaid,
-      departmentSpend,
+      highestCompensated,
+      departmentCompensation,
+      topDepartment: topDepartmentEntry
+        ? {
+            name: topDepartmentEntry[0],
+            ...topDepartmentEntry[1],
+            averageGross: topDepartmentEntry[1].headcount
+              ? topDepartmentEntry[1].gross / topDepartmentEntry[1].headcount
+              : 0,
+          }
+        : null,
     });
   }
 
@@ -325,7 +347,8 @@ export const getReportsOverview = async () => {
       headcount: employees.length,
       activeToday: attendance.filter((item) => item.status !== "Absent").length,
       pendingLeaves: leaves.filter((item) => item.status === "Pending").length,
-      payrollTotal: employees.reduce((sum, item) => sum + (item.netPay || 0), 0),
+      compensationTotal: employees.reduce((sum, item) => sum + (item.grossPay || 0), 0),
+      takeHomeTotal: employees.reduce((sum, item) => sum + (item.netPay || 0), 0),
       attendanceBreakdown,
       leaveBreakdown,
     };
