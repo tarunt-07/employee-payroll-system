@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PayrollPro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand__mark">Rs</div>
+          <div>
+            <div class="sidebar-brand__title">PayrollPro</div>
+            <div class="sidebar-brand__sub">Management System</div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="sidebar-nav__label">Navigation</div>
+          <div class="nav-link active"><span class="nav-link__icon">DB</span>Dashboard</div>
+          <div class="nav-link"><span class="nav-link__icon">EM</span>Employees</div>
+          <div class="nav-link"><span class="nav-link__icon">AD</span>Add Employee</div>
+          <div class="nav-link"><span class="nav-link__icon">PS</span>Payslip</div>
+          <div class="nav-link"><span class="nav-link__icon">SV</span>Save / Load</div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-user">
+            <strong>Payroll Admin</strong>
+            <span>admin@payrollpro.com</span>
+          </div>
+          <div>
+            OT Rate: <span class="sidebar-highlight">Variable per employee</span>
+          </div>
+          <div class="sidebar-note">C mini project running through WebAssembly</div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div class="page">
+          <div class="hero-panel">
+            <div>
+              <span class="eyebrow">Employee Payroll System</span>
+              <h1 class="page-title">Payroll workspace with C logic</h1>
+              <p class="page-subtitle">
+                The visual design stays close to your existing project while the actual business
+                logic now runs from <strong>main.c</strong> through Emscripten and WebAssembly.
+              </p>
+            </div>
+            <div class="hero-panel__badge">
+              <span>Submission type</span>
+              <strong>C + WebAssembly</strong>
+            </div>
+          </div>
+
+          <div class="grid cols-4">
+            <div class="stat-card metric-card">
+              <div class="metric-dot" style="background: var(--gold)"></div>
+              <div class="stat-label">Employees</div>
+              <div class="stat-value" id="employee-count">0</div>
+            </div>
+            <div class="stat-card metric-card">
+              <div class="metric-dot" style="background: #84cc16"></div>
+              <div class="stat-label">Total Gross Pay</div>
+              <div class="stat-value stat-value--small" id="total-gross">Rs.0</div>
+            </div>
+            <div class="stat-card metric-card">
+              <div class="metric-dot" style="background: #38bdf8"></div>
+              <div class="stat-label">Total Net Pay</div>
+              <div class="stat-value stat-value--small" id="total-net">Rs.0</div>
+            </div>
+            <div class="stat-card metric-card">
+              <div class="metric-dot" style="background: #fb7185"></div>
+              <div class="stat-label">Data File</div>
+              <div class="stat-value stat-value--small">employees.dat</div>
+              <div class="metric-note">Saved in browser storage for GitHub Pages use.</div>
+            </div>
+          </div>
+
+          <div class="grid cols-2 section-gap">
+            <section class="card console-card">
+              <div class="section-head">
+                <div>
+                  <h2>Payroll Console</h2>
+                  <p>
+                    Use the same menu-driven flow your DA expects. Type menu choices and field
+                    values here.
+                  </p>
+                </div>
+              </div>
+
+              <div id="terminal" class="terminal-output" aria-live="polite"></div>
+
+              <div class="quick-actions">
+                <button class="ghost-btn" type="button" data-menu="1">1. Add</button>
+                <button class="ghost-btn" type="button" data-menu="2">2. View</button>
+                <button class="ghost-btn" type="button" data-menu="3">3. Search</button>
+                <button class="ghost-btn" type="button" data-menu="4">4. Payslip</button>
+                <button class="ghost-btn" type="button" data-menu="5">5. Save</button>
+                <button class="ghost-btn" type="button" data-menu="6">6. Load</button>
+                <button class="ghost-btn" type="button" data-menu="7">7. Exit</button>
+              </div>
+
+              <div class="terminal-input-row">
+                <input
+                  id="console-input"
+                  class="input"
+                  type="text"
+                  placeholder="Type input here and press Send"
+                  autocomplete="off"
+                />
+                <button id="send-input" class="btn" type="button">Send</button>
+              </div>
+
+              <div class="console-status" id="console-status">Loading C program...</div>
+            </section>
+
+            <section class="card payslip-card">
+              <div class="section-head">
+                <div>
+                  <h2>Payslip Generator</h2>
+                  <p>The C program fills this card when you choose menu option 4.</p>
+                </div>
+              </div>
+
+              <div id="payslip-empty" class="list-row section-gap">
+                <div>
+                  <strong>No payslip loaded yet</strong>
+                  <span>Generate a payslip from the C menu to show the employee breakdown here.</span>
+                </div>
+              </div>
+
+              <div id="payslip-content" class="hidden section-gap">
+                <div class="list-row">
+                  <div>
+                    <strong id="payslip-name">-</strong>
+                    <span id="payslip-meta">-</span>
+                  </div>
+                  <div>
+                    <strong id="payslip-date">-</strong>
+                    <span>Generated</span>
+                  </div>
+                </div>
+
+                <div class="grid cols-3">
+                  <div class="stat-card">
+                    <div class="stat-label">Basic Pay</div>
+                    <div class="stat-value stat-value--small" id="pay-basic">Rs.0</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">OT Pay</div>
+                    <div class="stat-value stat-value--small" id="pay-ot">Rs.0</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Gross Pay</div>
+                    <div class="stat-value stat-value--small" id="pay-gross">Rs.0</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Tax</div>
+                    <div class="stat-value stat-value--small" id="pay-tax">Slab in C</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Net Pay</div>
+                    <div class="stat-value stat-value--small" id="pay-net">Rs.0</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Department</div>
+                    <div class="stat-value stat-value--small" id="pay-department">-</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const terminal = document.getElementById("terminal");
+      const consoleInput = document.getElementById("console-input");
+      const sendButton = document.getElementById("send-input");
+      const statusText = document.getElementById("console-status");
+      const inputQueue = [];
+
+      function appendToTerminal(text) {
+        terminal.textContent += text;
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      function enqueueInput(text) {
+        const value = String(text);
+        appendToTerminal("> " + value + "\n");
+        for (let i = 0; i < value.length; i += 1) {
+          inputQueue.push(value.charCodeAt(i));
+        }
+        inputQueue.push(10);
+      }
+
+      function sendCurrentInput() {
+        const value = consoleInput.value.trim();
+        if (!value) {
+          return;
+        }
+        enqueueInput(value);
+        consoleInput.value = "";
+        consoleInput.focus();
+      }
+
+      function formatCurrency(value) {
+        return "Rs." + Number(value || 0).toFixed(2);
+      }
+
+      window.updatePayrollMetrics = function updatePayrollMetrics(count, totalGross, totalNet) {
+        document.getElementById("employee-count").textContent = String(count);
+        document.getElementById("total-gross").textContent = formatCurrency(totalGross);
+        document.getElementById("total-net").textContent = formatCurrency(totalNet);
+      };
+
+      window.showPayslipCard = function showPayslipCard(
+        name,
+        empId,
+        department,
+        basicPay,
+        overtimePay,
+        grossPay,
+        netPay,
+        generatedAt
+      ) {
+        const taxAmount = Number(grossPay) - Number(netPay);
+
+        document.getElementById("payslip-empty").classList.add("hidden");
+        document.getElementById("payslip-content").classList.remove("hidden");
+        document.getElementById("payslip-name").textContent = name;
+        document.getElementById("payslip-meta").textContent = empId + " · " + department;
+        document.getElementById("payslip-date").textContent = generatedAt;
+        document.getElementById("pay-basic").textContent = formatCurrency(basicPay);
+        document.getElementById("pay-ot").textContent = formatCurrency(overtimePay);
+        document.getElementById("pay-gross").textContent = formatCurrency(grossPay);
+        document.getElementById("pay-tax").textContent = formatCurrency(taxAmount);
+        document.getElementById("pay-net").textContent = formatCurrency(netPay);
+        document.getElementById("pay-department").textContent = department;
+      };
+
+      window.clearPayslipCard = function clearPayslipCard() {
+        document.getElementById("payslip-content").classList.add("hidden");
+        document.getElementById("payslip-empty").classList.remove("hidden");
+      };
+
+      sendButton.addEventListener("click", sendCurrentInput);
+      consoleInput.addEventListener("keydown", function onKeyDown(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          sendCurrentInput();
+        }
+      });
+
+      document.querySelectorAll("[data-menu]").forEach(function bindQuickAction(button) {
+        button.addEventListener("click", function onClick() {
+          enqueueInput(button.getAttribute("data-menu"));
+        });
+      });
+
+      var Module = {
+        preRun: [
+          function () {
+            FS.init(
+              function stdin() {
+                return inputQueue.length ? inputQueue.shift() : null;
+              },
+              function stdout(charCode) {
+                appendToTerminal(String.fromCharCode(charCode));
+              },
+              function stderr(charCode) {
+                appendToTerminal(String.fromCharCode(charCode));
+              }
+            );
+
+            try {
+              FS.mkdir("/data");
+            } catch (error) {}
+
+            FS.mount(IDBFS, {}, "/data");
+
+            addRunDependency("syncfs");
+            FS.syncfs(true, function (error) {
+              if (error) {
+                console.error(error);
+                appendToTerminal("Persistent storage could not be loaded.\n");
+              }
+              FS.chdir("/data");
+              removeRunDependency("syncfs");
+            });
+          }
+        ],
+        onRuntimeInitialized: function () {
+          statusText.textContent = "C payroll program ready. Follow the menu in the console.";
+          consoleInput.focus();
+        },
+        setStatus: function (text) {
+          statusText.textContent = text || "Running payroll program...";
+        },
+        print: function (text) {
+          appendToTerminal(String(text) + "\n");
+        },
+        printErr: function (text) {
+          appendToTerminal(String(text) + "\n");
+        }
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
